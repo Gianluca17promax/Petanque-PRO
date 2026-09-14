@@ -1,0 +1,9 @@
+{
+  "name": "Pétanque Pro",
+  "short_name": "Pétanque Pro",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3f6fa",
+  "theme_color": "#1677e8",
+  "lang": "de"
+}

@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1677e8">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Pétanque Pro</title>
+<style>
+:root{--blue:#0869df;--navy:#073e7d;--red:#e53935;--green:#13a56a;--bg:#f3f6fa;--card:#fff;--text:#14253d;--muted:#718096;--line:#e2e9f2;--shadow:0 8px 24px rgba(28,57,91,.07)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);padding:15px 18px;display:flex;justify-content:space-between;align-items:center}
+header h1{margin:0;font-size:25px;color:#14253d}.wrap{max-width:900px;margin:auto;padding:18px 18px 105px}
+.hero{padding:25px;border-radius:26px;background:linear-gradient(135deg,var(--navy),#0b7cf0);color:#fff;box-shadow:0 15px 35px rgba(5,84,166,.2);margin-bottom:16px}.hero h2{margin:0 0 5px;font-size:31px}.hero p{margin:0 0 20px;opacity:.9}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:19px;padding:16px;box-shadow:var(--shadow);margin-bottom:12px}
+.tile{text-align:left;border:0;width:100%}.tile .ico{font-size:25px}.tile h3{margin:8px 0 4px}.muted{color:var(--muted)}.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.btn{border:0;border-radius:13px;padding:12px 16px;font-weight:800;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#edf4fc;color:#174572}.danger{background:#ffe9e9;color:#b42318}.ok{background:#e6f7ef;color:#11683e}.full{width:100%}
+.seg{display:flex;gap:4px;padding:4px;border-radius:13px;background:#edf2f7}.seg button{flex:1;border:0;background:none;border-radius:10px;padding:11px}.seg button.active{background:#fff;color:var(--blue);font-weight:800;box-shadow:0 2px 7px #dbe4ee}
+.input,.select,input,select{width:100%;border:1px solid #d6e0eb;border-radius:12px;background:#fff;padding:13px;color:var(--text)}.form{display:grid;gap:10px}.list{background:#fff;border:1px solid var(--line);border-radius:18px;padding:0 15px;box-shadow:var(--shadow)}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #edf1f5}.item:last-child{border-bottom:0}
+.person{display:flex;align-items:center;gap:10px}.avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#e8f2ff;color:var(--blue);font-weight:900}.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{text-align:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}.stat b{display:block;font-size:25px}.empty{text-align:center;padding:28px;color:var(--muted)}
+.score{display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center}.scorebox{background:#fff;border:1px solid var(--line);border-radius:18px;padding:15px}.score-num{font-size:52px;font-weight:900;margin:8px 0}.blue{color:#1677e8}.red{color:#d83a3a}.controls{display:flex;justify-content:center;gap:8px}.pill{display:inline-block;padding:5px 9px;border-radius:999px;background:#eaf4ff;color:#0869df;font-size:12px;font-weight:800;margin:3px}.boule{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line)}
+.shot{border:2px dashed #e4a100;background:#fffaf0;border-radius:15px;padding:12px;margin-top:10px}.winner{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;z-index:100}.winnerbox{background:#fff;border-radius:22px;padding:30px;text-align:center;max-width:430px;margin:20px;box-shadow:0 20px 60px #0004}
+.weekgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}.day{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;min-height:95px}.day strong{display:block}
+.tab{position:fixed;z-index:20;bottom:0;left:0;right:0;height:79px;padding-bottom:env(safe-area-inset-bottom);background:rgba(255,255,255,.97);border-top:1px solid var(--line);display:flex;justify-content:space-around}.tab button{border:0;background:none;color:#6d7d91;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:70px;font-size:21px}.tab button span{font-size:11px}.tab button.active{color:var(--blue);font-weight:800}
+.drawer{position:fixed;inset:0;background:#0004;z-index:50}.drawer.hidden{display:none}.drawerbox{height:100%;width:min(350px,88vw);background:#fff;padding:20px;display:flex;flex-direction:column;gap:7px}.drawerbox button{border:0;background:#f6f8fb;text-align:left;border-radius:12px;padding:13px;font:inherit}.drawerhead{display:flex;justify-content:space-between;font-size:21px;margin-bottom:13px}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.weekgrid{grid-template-columns:repeat(2,1fr)}.score-num{font-size:42px}}
+</style>
+</head>
+<body>
+
+<header><button class="btn secondary" id="menu">☰</button><h1>Pétanque Pro</h1><button class="btn secondary" onclick="go('settings')">⚙️</button></header>
+<div class="wrap"><main id="app"></main></div>
+<div class="tab">
+<button data-r="home">⌂<span>Home</span></button>
+<button data-r="game">◉<span>Spiele</span></button>
+<button data-r="training">⏱<span>Training</span></button>
+<button data-r="more">•••<span>Mehr</span></button>
+</div>
+<div class="drawer hidden" id="drawer"><div class="drawerbox">
+<div class="drawerhead"><b>Pétanque Pro</b><button id="close">×</button></div>
+<button onclick="go('home')">⌂ Home</button><button onclick="go('players')">👤 Spieler</button><button onclick="go('teams')">👥 Teams</button><button onclick="go('game')">🏆 Neues Spiel</button><button onclick="go('history')">🕘 Spielhistorie</button><button onclick="go('stats')">📊 Statistik</button><button onclick="go('week')">📅 Wochenübersicht</button><button onclick="go('training')">⏱ Training</button><button onclick="go('tireur')">🎯 Tireur-Turnier</button><button onclick="go('rules')">📖 Regeln</button><button onclick="go('settings')">⚙️ Einstellungen</button>
+</div></div>
+<div id="modal"></div>
+<script>
+const KEY="petanqueProFinalOldLayout";
+const AUTH_KEY="petanqueProAuth";
+const initial={players:[],teams:[],games:[],training:[],tireur:[],goal:5,goalWeek:"",active:null,timer:{running:false,startedAt:0,elapsed:0}};
+let st=JSON.parse(localStorage.getItem(KEY)||"null")||JSON.parse(JSON.stringify(initial));
+let auth=JSON.parse(localStorage.getItem(AUTH_KEY)||"null");
+let remoteSyncTimer=null;
+function save(){
+ localStorage.setItem(KEY,JSON.stringify(st));
+ if(auth?.token){clearTimeout(remoteSyncTimer);remoteSyncTimer=setTimeout(()=>syncState(),250)}
+}
+async function api(path,options={}){
+ const headers={"content-type":"application/json",...(options.headers||{})};
+ if(auth?.token)headers.authorization="Bearer "+auth.token;
+ const r=await fetch("/api/"+path,{...options,headers});
+ const data=await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error(data.error||"Serverfehler");
+ return data;
+}
+async function syncState(){if(!auth?.token)return;try{await api("state",{method:"PUT",body:JSON.stringify({data:st})})}catch(e){console.warn("Cloud-Sync:",e.message)}}
+function hasLocalData(){return !!(st.players.length||st.games.length||st.training.length||st.tireur.length)}
+async function loadRemoteState(afterLogin=false){
+ if(!auth?.token)return;
+ try{
+  const r=await api("state");
+  if(r.data){
+   const localHas=hasLocalData(),remoteHas=!!(r.data.players?.length||r.data.games?.length||r.data.training?.length||r.data.tireur?.length);
+   if(afterLogin&&localHas&&!remoteHas)await syncState();
+   else{st={...initial,...r.data};localStorage.setItem(KEY,JSON.stringify(st))}
+  }
+ }catch(e){console.warn("Cloud-Daten:",e.message)}
+}
+async function bootAuth(){
+ if(!auth?.token)return;
+ try{const r=await api("me");if(!r.user){auth=null;localStorage.removeItem(AUTH_KEY)}else{auth.user=r.user;localStorage.setItem(AUTH_KEY,JSON.stringify(auth));await loadRemoteState(false)}render()}catch(e){console.warn("Anmeldung:",e.message)}
+}
+async function loginUser(){
+ const username=$("#loginUser").value.trim(),password=$("#loginPass").value;
+ if(!username||!password)return alert("Bitte Benutzername und Passwort eingeben.");
+ try{const r=await fetch("/api/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({username,password})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Anmeldung fehlgeschlagen.");auth=d;localStorage.setItem(AUTH_KEY,JSON.stringify(auth));await loadRemoteState(true);alert("Anmeldung erfolgreich.");render()}catch(e){alert(e.message)}
+}
+async function registerUser(){
+ const username=$("#regUser").value.trim(),password=$("#regPass").value;
+ if(!username||!password)return alert("Bitte Benutzername und Passwort eingeben.");
+ try{const r=await fetch("/api/register",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({username,password})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Registrierung fehlgeschlagen.");auth=d;localStorage.setItem(AUTH_KEY,JSON.stringify(auth));if(hasLocalData())await syncState();alert("Konto erstellt und angemeldet.");render()}catch(e){alert(e.message)}
+}
+async function logoutUser(){try{await api("logout",{method:"POST"})}catch(e){}auth=null;localStorage.removeItem(AUTH_KEY);alert("Abgemeldet.");render()}
+function weekKey(d=new Date()){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x.toISOString().slice(0,10)}
+function applyGoalRollover(){const cur=weekKey();if(!st.goalWeek){st.goalWeek=cur;save();return}if(cur>st.goalWeek){const mins=st.training.filter(x=>x.date>=st.goalWeek&&x.date<cur).reduce((a,x)=>a+(+x.minutes||0),0);if(mins<st.goal*60)st.goal++;st.goalWeek=cur;save()}}
+const $=x=>document.querySelector(x),$$=x=>[...document.querySelectorAll(x)];
+const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const fmt=t=>{t=Math.max(0,Math.floor(t));return [Math.floor(t/3600),Math.floor(t%3600/60),t%60].map(x=>String(x).padStart(2,"0")).join(":")};
+function go(r){location.hash=r}
+function current(){return location.hash.slice(1)||"home"}
+addEventListener("hashchange",render);
+function render(){const r=current();$$(".tab button").forEach(b=>b.classList.toggle("active",b.dataset.r===r));({home,players,teams,game,history,stats,week,training,tireur,global,rules,settings,videos,more}[r]||home)($("#app"))}
+function tile(i,t,d,r){return `<button class="card tile" onclick="go('${r}')"><div class="ico">${i}</div><h3>${t}</h3><div class="muted">${d}</div></button>`}
+
+function authCard(){
+ if(auth?.user)return `<div class="card"><div class="row"><div><b>☁️ Online angemeldet</b><div class="muted">${esc(auth.user.username)} · Daten werden zentral synchronisiert.</div></div><button class="btn secondary" onclick="logoutUser()">Abmelden</button></div></div>`;
+ return `<div class="card"><h3>☁️ Online-Zugang</h3><p class="muted">Andere Nutzer können deine öffentlichen Statistiken, Trainingszeiten und Tireur-Ergebnisse sehen.</p><div class="grid"><div><input id="loginUser" placeholder="Benutzername"><input id="loginPass" type="password" placeholder="Passwort" style="margin-top:8px"><button class="btn primary full" style="margin-top:8px" onclick="loginUser()">Anmelden</button></div><div><input id="regUser" placeholder="Neuer Benutzername"><input id="regPass" type="password" placeholder="Passwort (mind. 6 Zeichen)" style="margin-top:8px"><button class="btn secondary full" style="margin-top:8px" onclick="registerUser()">Konto erstellen</button></div></div></div>`;
+}
+function home(e){e.innerHTML=`<div class="hero"><h2>Pétanque Pro</h2><p>Spielen. Zählen. Gemeinsam.</p><button class="btn" style="background:#fff;color:#0869df" onclick="go('game')">▶ Neues Spiel starten</button></div>${authCard()}${st.active?`<div class="card"><div class="row"><div><b>Aktives Spiel</b><div class="muted">${st.active.mode} · max. 15 Punkte pro Aufnahme</div></div><span class="pill">LIVE</span></div><div class="score"><div class="scorebox"><b class="blue">Team Blau</b><div class="score-num blue">${st.active.blue}</div></div><div class="scorebox"><b class="red">Team Rot</b><div class="score-num red">${st.active.red}</div></div></div><button class="btn primary full" onclick="go('game')">Spiel fortsetzen</button></div>`:""}<div class="grid">${tile("👤","Spieler & Teams","Verwalten","players")}${tile("🏆","Neues Spiel","Einzel, Doublette oder Triplette","game")}${tile("📊","Statistik","Punkte und Ergebnisse","stats")}${tile("🕘","Spielhistorie","Ergebnisse ansehen","history")}${tile("📅","Wochenübersicht","Zeit pro Wochentag","week")}${tile("🌍","Globale Rangliste","Tireur, Training & Statistiken","global")}${tile("🎯","Tireur-Turnier","0 bis 72 Treffer","tireur")}</div>`}
+function players(e){e.innerHTML=`<div class="row"><h2>Spieler</h2><button class="btn primary" onclick="addPlayer()">+ Spieler</button></div><div class="list">${st.players.length?st.players.map((p,i)=>`<div class="item"><div class="person"><div class="avatar">${esc(p.name[0]||"?")}</div><div><b>${esc(p.name)}</b><div class="muted">${p.experience||0} Jahre · ${p.size||74} mm · ${p.weight||700} g</div><span class="pill">Gesamtpunkte: ${p.points||0}</span></div></div><div><button class="btn secondary" onclick="editPlayer(${i})">Bearbeiten</button><button class="btn danger" onclick="delPlayer(${i})">×</button></div></div>`).join(""):"<div class='empty'>Noch keine Spieler.</div>"}</div>`}
+function addPlayer(){let n=prompt("Name des Spielers:");if(!n?.trim())return;let experience=prompt("Spielerfahrung in Jahren:","0"),size=+prompt("Kugelgröße (71–80 mm):","74"),weight=+prompt("Kugelgewicht (650–800 g):","700");if(size<71||size>80||weight<650||weight>800)return alert("Kugelgröße 71–80 mm und Gewicht 650–800 g.");st.players.push({id:id(),name:n.trim(),experience:+experience||0,size,weight,points:0});save();render()}
+function editPlayer(i){let n=prompt("Name ändern:",st.players[i].name);if(n?.trim()){st.players[i].name=n.trim();save();render()}}
+function delPlayer(i){if(confirm("Spieler löschen?")){st.players.splice(i,1);save();render()}}
+function teams(e){e.innerHTML=`<div class="row"><h2>Teams</h2><button class="btn primary" onclick="addTeam()">+ Team</button></div><div class="list">${st.teams.length?st.teams.map((t,i)=>`<div class="item"><div><b>${esc(t.name)}</b><div class="muted">${st.players.filter(p=>p.team===t.id).map(p=>esc(p.name)).join(", ")||"Keine Spieler"}</div></div><div><button class="btn secondary" onclick="assign(${i})">Spieler</button><button class="btn danger" onclick="delTeam(${i})">×</button></div></div>`).join(""):"<div class='empty'>Noch keine Teams.</div>"}</div>`}
+function addTeam(){let n=prompt("Teamname:");if(n?.trim()){st.teams.push({id:id(),name:n.trim()});save();render()}}
+function assign(i){if(!st.players.length)return alert("Erst Spieler anlegen.");let q=prompt("Spieler-Nummern, mit Komma trennen:\n"+st.players.map((p,j)=>`${j+1}. ${p.name}`).join("\n"));if(!q)return;q.split(",").map(x=>+x.trim()-1).filter(x=>st.players[x]).forEach(x=>st.players[x].team=st.teams[i].id);save();render()}
+function delTeam(i){if(confirm("Team löschen?")){let x=st.teams[i].id;st.players.forEach(p=>{if(p.team===x)p.team=null});st.teams.splice(i,1);save();render()}}
+
+function playerOptions(used=[]){return `<option value="">Spieler auswählen</option>`+st.players.map(p=>`<option value="${p.id}" ${used.includes(p.id)?"disabled":""}>${esc(p.name)}</option>`).join("")}
+function game(e){
+ if(!st.active){
+   e.innerHTML=`<h2>Neue Partie starten</h2>
+   <div class="card"><h3>Spielmodus</h3>
+   <div class="seg" id="mode"><button class="active">Einzel</button><button>Doublette</button><button>Triplette</button></div>
+   <div style="margin-top:12px;padding:12px;border-radius:14px;background:#fff8df;border:1px solid #f0df9e"><b>Spielziel: 13 Punkte</b><br><span class="muted">Maximal 15 Punkte je Aufnahme.</span></div>
+   <h3>Team Blau</h3><div id="blueSel" class="form"></div>
+   <h3>Team Rot</h3><div id="redSel" class="form"></div>
+   <button class="btn primary full" style="margin-top:15px" onclick="start()">Spiel starten</button></div>`;
+   buildSelections(); return;
+ }
+ let g=st.active, elapsed=st.timer.elapsed+(st.timer.running?(Date.now()-st.timer.startedAt)/1000:0);
+ const all=[...g.bluePlayers,...g.redPlayers];
+ e.innerHTML=`
+ <div class="row"><div><h2>Spielstand</h2><div class="muted">${g.mode} · Ziel 13 · max. 15 Punkte je Aufnahme</div></div><button class="btn danger" onclick="finish()">Beenden</button></div>
+ <div class="card"><div style="text-align:center;font-size:28px;font-weight:900">${fmt(elapsed)}</div>
+   <div class="row"><button class="btn primary" onclick="timerToggle()">${st.timer.running?"⏸ Pause":"▶ Start"}</button><button class="btn secondary" onclick="timerReset()">↩ Reset</button></div>
+ </div>
+ <div class="score"><div class="scorebox"><b class="blue">Team Blau</b><div class="score-num blue">${g.blue}</div></div><div class="scorebox"><b class="red">Team Rot</b><div class="score-num red">${g.red}</div></div></div>
+ <div class="card"><h2>Aufnahme</h2>
+   <div class="row">
+     <div style="flex:1;min-width:240px"><label class="muted"><b>Wer hat die Aufnahme gewonnen?</b></label>
+       <select id="endTeam"><option value="blue">Team Blau</option><option value="red">Team Rot</option></select>
+     </div>
+     <div style="width:150px"><label class="muted"><b>Punkte</b></label><input id="endPoints" type="number" min="0" max="15" value="${g.current||0}"></div>
+   </div>
+   <button class="btn primary full" style="margin-top:12px" onclick="endEnd()">Aufnahme beenden</button>
+ </div>
+ <div class="card"><div class="row"><h2 style="margin:0">Spieler der Partie</h2><span class="pill">Kugeln & Rollen</span></div>
+   <p class="muted">Rolle einmal festlegen. Beim Leger kann zusätzlich SCHUSS aktiviert werden.</p>
+   <div class="grid">${all.map(pid=>playerCard(pid,g)).join("")}</div>
+ </div>
+ <div class="card"><div class="row"><h2 style="margin:0">Aufnahmen</h2><span class="pill">${g.ends.length}</span></div>
+   ${g.ends.length?g.ends.map((x,i)=>`<div class="item"><span>Aufnahme ${i+1}</span><b>Team ${x.team==="blue"?"Blau":"Rot"} +${x.points}</b></div>`).join(""):"<div class='empty'>Noch keine Aufnahme beendet.</div>"}
+ </div>`;
+ if(st.timer.running)setTimeout(()=>{if(current()==="game")render()},1000);
+}
+function playerCard(pid,g){
+ let p=st.players.find(x=>x.id===pid), role=g.roles[pid]||"", shot=!!g.shot[pid];
+ let vals=shot?[0,3,5]:[0,1,2];
+ return `<div class="card" style="margin:0">
+   <div class="row"><div><b>${esc(p.name)}</b><div class="muted">Team ${g.bluePlayers.includes(pid)?"Blau":"Rot"}</div></div><span class="pill">${role||"Rolle offen"}</span></div>
+   <select onchange="setRole('${pid}',this.value)" style="margin-top:10px">
+     <option value="">Rolle wählen</option><option value="Leger" ${role==="Leger"?"selected":""}>Leger</option><option value="Schießer" ${role==="Schießer"?"selected":""}>Schießer</option>
+   </select>
+   ${role==="Leger"?`<button class="btn ${shot?"primary":"secondary"} full" style="margin-top:9px" onclick="toggleShot('${pid}')">${shot?"SCHUSS aktiv · 0 / 3 / 5":"SCHUSS"}</button>`:""}
+   <h3>Gespielte Kugeln</h3>
+   ${g.boules[pid].map((v,i)=>`<div class="boule"><span>Kugel ${i+1}</span><b>${v} Punkte</b></div>`).join("")}
+   <div class="row">${vals.map(v=>`<button class="btn ${v===0?"secondary":"primary"}" onclick="addBoule('${pid}',${v})">${v}</button>`).join("")}</div>
+   <div class="muted" style="margin-top:8px">Kugel-Punkte: ${g.boules[pid].reduce((a,b)=>a+b,0)}</div>
+ </div>`;
+}
+function setRole(pid,role){
+ if(!st.active)return;
+ if(role)st.active.roles[pid]=role;else delete st.active.roles[pid];
+ if(role!=="Leger")delete st.active.shot[pid];
+ save();render();
+}
+function toggleShot(pid){
+ if(!st.active || st.active.roles[pid]!=="Leger")return;
+ st.active.shot[pid]=!st.active.shot[pid];
+ save();render();
+}
+
+function setupModeButtons(){
+ const buttons=$$("#mode button");
+ buttons.forEach(btn=>btn.onclick=()=>{
+   buttons.forEach(b=>b.classList.remove("active"));
+   btn.classList.add("active");
+   buildSelections();
+ });
+}
+function buildSelections(){let n=$("#mode").querySelector(".active").textContent==="Einzel"?1:$("#mode").querySelector(".active").textContent==="Doublette"?2:3;$("#blueSel").innerHTML=Array.from({length:n},(_,i)=>`<select class="playerPick">${playerOptions()}</select>`).join("");$("#redSel").innerHTML=Array.from({length:n},(_,i)=>`<select class="playerPick">${playerOptions()}</select>`).join("");$$(".playerPick").forEach(x=>x.onchange=()=>{let vals=$$(".playerPick").map(x=>x.value).filter(Boolean);$$(".playerPick").forEach(sel=>[...sel.options].forEach(o=>{if(o.value)o.disabled=vals.includes(o.value)&&o.value!==sel.value}))});setupModeButtons()}
+function start(){let mode=$("#mode .active").textContent,n=mode==="Einzel"?1:mode==="Doublette"?2:3,vals=$$(".playerPick").map(x=>x.value).filter(Boolean),b=vals.slice(0,n),r=vals.slice(n);if(vals.length!==2*n||new Set(vals).size!==2*n)return alert("Bitte unterschiedliche gespeicherte Spieler für Blau und Rot auswählen.");let roles={};vals.forEach(pid=>roles[pid]="Leger");st.active={id:id(),mode,bluePlayers:b,redPlayers:r,blue:0,red:0,roles,shot:{},boules:Object.fromEntries(vals.map(x=>[x,[]])),current:0,ends:[]};st.timer={running:false,startedAt:0,elapsed:0};save();render();toast("Spiel gestartet")}
+function playerBoule(pid,g){let p=st.players.find(x=>x.id===pid),isLeger=g.roles[pid]==="Leger",shot=!!g.shot[pid],vals=shot?[0,3,5]:[0,1,2];return `<div class="shot"><div class="row"><div><b>${esc(p.name)}</b><div class="muted">${g.roles[pid]}</div></div>${isLeger?`<button class="btn ${shot?"primary":"secondary"}" onclick="toggleShot('${pid}')">${shot?"SCHUSS · 0 / 3 / 5":"SCHUSS"}</button>`:""}</div><div class="boule"><span>Kugel ${g.boules[pid].length+1}</span>${vals.map(v=>`<button class="btn ${v===0?"secondary":"primary"}" onclick="addBoule('${pid}',${v})">${v}</button>`).join("")}</div><div>${g.boules[pid].map((v,i)=>`<span class="pill">K${i+1}: ${v}</span>`).join("")}</div></div>`}
+function toggleShot(pid){let g=st.active;if(g.roles[pid]!=="Leger")return;g.shot[pid]=!g.shot[pid];save();render()}
+function addBoule(pid,v){
+ let g=st.active;
+ if(!g.boules[pid])g.boules[pid]=[];
+ if(g.boules[pid].length>=3)return alert("Maximal 3 Kugeln pro Spieler.");
+ g.boules[pid].push(v);
+ let p=st.players.find(x=>x.id===pid);
+ p.points=(p.points||0)+v;
+ save();render();
+}
+
+function resetEnd(){let g=st.active;Object.values(g.boules).forEach(a=>a.length=0);g.current=0;save();render()}
+function endEnd(){
+ let g=st.active, points=Math.max(0,Math.min(15,+$("#endPoints").value||0)), team=$("#endTeam").value;
+ if(!points)return alert("Bitte Punkte für die Aufnahme eingeben.");
+ g[team]+=points; g.ends.push({team,points});
+ Object.values(g.boules).forEach(a=>a.length=0);
+ g.current=0;
+ Object.keys(g.shot||{}).forEach(k=>delete g.shot[k]);
+ save();
+ if(g.blue>=13||g.red>=13)showWinner(g.blue>=13?"Blau":"Rot"); else render();
+}
+
+function showWinner(team){
+ const old=document.getElementById("winnerPopup"); if(old)old.remove();
+ const wrap=document.createElement("div"); wrap.id="winnerPopup";
+ wrap.style.cssText="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:9999;padding:20px";
+ wrap.innerHTML=`<div style="background:white;border-radius:24px;padding:34px;text-align:center;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25)"><div style="font-size:54px">🏆</div><h1>Team ${team} hat gewonnen!</h1><p>Das Team ${team} hat zuerst 13 Punkte erreicht.</p></div>`;
+ document.body.appendChild(wrap);
+ setTimeout(()=>{wrap.remove();finish();},5000);
+}
+
+function finish(w){let g=st.active;if(!g)return;let d=st.timer.elapsed+(st.timer.running?(Date.now()-st.timer.startedAt)/1000:0);st.games.unshift({...g,duration:d,finished:new Date().toISOString(),winner:w||(g.blue>g.red?"Blau":g.red>g.blue?"Rot":"")});st.active=null;st.timer={running:false,startedAt:0,elapsed:0};save();$("#modal").innerHTML="";go("history")}
+function timerToggle(){if(st.timer.running){st.timer.elapsed+=(Date.now()-st.timer.startedAt)/1000;st.timer.running=false;st.timer.startedAt=0}else{st.timer.running=true;st.timer.startedAt=Date.now()}save();render()}
+function timerReset(){st.timer={running:false,startedAt:0,elapsed:0};save();render()}
+
+function history(e){e.innerHTML=`<div class="row"><h2>Spielhistorie</h2><button class="btn danger" onclick="clearGames()">Löschen</button></div><div class="list">${st.games.length?st.games.map((g,i)=>`<div class="item"><div><b>${new Date(g.finished).toLocaleDateString("de-DE")} · ${g.mode}</b><div>Team Blau ${g.blue} : ${g.red} Team Rot</div><div class="muted">${g.winner||"Unentschieden"} · ${fmt(g.duration)}</div></div><button class="btn danger" onclick="delGame(${i})">×</button></div>`).join(""):"<div class='empty'>Noch keine Spiele.</div>"}</div>`}
+function delGame(i){st.games.splice(i,1);save();render()}function clearGames(){if(confirm("Alle Ergebnisse löschen?")){st.games=[];save();render()}}
+function stats(e){let total=st.players.reduce((a,p)=>a+(p.points||0),0);e.innerHTML=`<h2>Statistik</h2>${auth?`<div class="card"><b>☁️ Deine Daten sind online gespeichert.</b><div class="muted">Andere Nutzer sehen deine öffentlichen Statistiken global.</div></div>`:`<div class="card"><b>Nur dieses Gerät</b><div class="muted">Melde dich an, damit die Daten zentral gespeichert werden.</div></div>`}<div class="statgrid"><div class="stat"><b>${st.players.length}</b>Spieler</div><div class="stat"><b>${st.games.length}</b>Spiele</div><div class="stat"><b>${total}</b>Punkte</div></div><div class="card"><h3>Spielerstatistik</h3>${st.players.map(p=>`<div class="item"><span>${esc(p.name)}</span><b>${p.points||0} Punkte</b></div>`).join("")||"<p class='muted'>Noch keine Spieler.</p>"}</div>`}
+function week(e){applyGoalRollover();let now=new Date(),m=new Date(now);m.setDate(now.getDate()-((now.getDay()+6)%7));let names=["Mo","Di","Mi","Do","Fr","Sa","So"];let cells=names.map((n,i)=>{let d=new Date(m);d.setDate(m.getDate()+i);let k=d.toISOString().slice(0,10),mins=st.training.filter(x=>x.date===k).reduce((a,x)=>a+x.minutes,0);return `<div class="day"><strong>${n}</strong>${d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}<br><b>${Math.floor(mins/60)} Std. ${mins%60} Min.</b></div>`}).join("");let mins=weekMinutes();e.innerHTML=`<h2>Wochenübersicht</h2>${auth?`<div class="card"><b>☁️ Training von ${esc(auth.user.username)}</b><div class="muted">Deine Trainingszeiten sind zentral gespeichert und global sichtbar.</div></div>`:`<div class="card"><b>Lokales Training</b><div class="muted">Anmelden, damit andere Nutzer deine Trainingszeiten sehen können.</div></div>`}<div class="weekgrid">${cells}</div><div class="card"><h3>Wochenziel</h3><p>${Math.floor(mins/60)} Std. ${mins%60} Min. / ${st.goal} Std.</p><p class="muted">${mins>=st.goal*60?"✅ Ziel erreicht":"⚠️ Ziel noch nicht erreicht"}</p></div>`}
+function weekMinutes(){let now=new Date(),m=new Date(now);m.setDate(now.getDate()-((now.getDay()+6)%7));let end=new Date(m);end.setDate(m.getDate()+7);return st.training.filter(x=>{let d=new Date(x.date+"T00:00:00");return d>=m&&d<end}).reduce((a,x)=>a+x.minutes,0)}
+let trainingStart=null,trainingAccum=0,trainingTimer=null;
+function training(e){e.innerHTML=`<h2>Training</h2><div class="card"><div style="text-align:center;font-size:38px;font-weight:900" id="trclock">${fmt(trainingAccum/1000)}</div><div class="row"><button class="btn primary" onclick="trStart()">▶ Start</button><button class="btn secondary" onclick="trPause()">⏸ Pause</button><button class="btn danger" onclick="trFinish()">Beenden</button></div></div><div class="card"><h3>Wochenziel</h3><input id="goal" type="number" min="0" step="1" value="${st.goal}"><button class="btn primary" style="margin-top:8px" onclick="setGoal()">Ziel speichern</button></div>`}
+function trStart(){if(trainingStart)return;trainingStart=Date.now();clearInterval(trainingTimer);trainingTimer=setInterval(()=>{$("#trclock").textContent=fmt((trainingAccum+Date.now()-trainingStart)/1000)},500)}
+function trPause(){if(trainingStart){trainingAccum+=Date.now()-trainingStart;trainingStart=null}clearInterval(trainingTimer)}
+function trFinish(){trPause();let mins=Math.max(1,Math.round(trainingAccum/60000)),d=new Date(),k=d.toISOString().slice(0,10);st.training.push({id:id(),date:k,minutes:mins});trainingAccum=0;save();go("week")}
+function setGoal(){st.goal=Math.max(0,+$("#goal").value||0);save();render()}
+function tireur(e){let sorted=[...st.tireur].sort((a,b)=>b.hits-a.hits);e.innerHTML=`<div class="row"><h2>Tireur-Turnier</h2><button class="btn secondary" onclick="go('global')">🌍 Globale Rangliste</button></div><div class="card"><select id="tirPlayer"><option value="">Spieler auswählen</option>${st.players.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select><input id="hits" type="number" min="0" max="72" value="0" style="margin-top:10px"><button class="btn primary full" style="margin-top:10px" onclick="saveTireur()">Ergebnis speichern</button>${auth?`<p class="muted">Das Ergebnis wird online gespeichert und fließt in die globale Rangliste ein.</p>`:`<p class="muted">Ohne Anmeldung bleibt das Ergebnis auf diesem Gerät.</p>`}</div><div class="list">${sorted.length?sorted.map((r,i)=>`<div class="item"><div><b>Platz ${i+1} · ${esc(r.name)}</b><div class="muted">${r.hits}/72 Treffer</div></div><button class="btn danger" onclick="delTireur('${r.id}')">Löschen</button></div>`).join(""):"<div class='empty'>Noch keine Ergebnisse.</div>"}</div>`}
+function saveTireur(){let p=st.players.find(x=>x.id===$("#tirPlayer").value),h=+$("#hits").value;if(!p)return alert("Bitte Spieler auswählen.");if(h<0||h>72)return alert("0 bis 72 Treffer eingeben.");st.tireur.push({id:id(),name:p.name,hits:h,date:new Date().toISOString()});save();render()}
+function delTireur(x){st.tireur=st.tireur.filter(r=>r.id!==x);save();render()}
+async function global(e){e.innerHTML=`<div class="row"><h2>🌍 Globale Rangliste</h2><button class="btn secondary" onclick="render()">↻ Aktualisieren</button></div><div class="card"><b>Gemeinsame Vereinsdaten</b><div class="muted">Tireur-Ergebnisse, Trainingszeiten und öffentliche Spielerstatistiken aller angemeldeten Nutzer.</div></div><div id="globalBox"><div class="card">Daten werden geladen …</div></div>`;if(!auth){$("#globalBox").innerHTML=`<div class="card"><b>Anmeldung erforderlich</b><p class="muted">Melde dich an, damit die gemeinsame Rangliste geladen werden kann.</p><button class="btn primary" onclick="go('home')">Zur Anmeldung</button></div>`;return}try{const d=await api("global");$("#globalBox").innerHTML=`<div class="card"><h3>🏆 Tireur – globale Rangliste</h3>${d.leaderboard.length?`<div class="list">${d.leaderboard.map((r,i)=>`<div class="item"><div><b>${i===0?"🥇 ":i===1?"🥈 ":i===2?"🥉 ":""}${i+1}. ${esc(r.name)}</b><div class="muted">${esc(r.user)} · ${r.date?new Date(r.date).toLocaleDateString("de-DE"):""}</div></div><strong>${r.hits}/72</strong></div>`).join("")}</div>`:"<div class='empty'>Noch keine globalen Tireur-Ergebnisse.</div>"}</div><div class="card"><h3>⏱ Trainingszeiten</h3>${d.training.length?`<div class="list">${d.training.slice(0,50).map(r=>`<div class="item"><div><b>${esc(r.user)}</b><div class="muted">${new Date(r.date+"T00:00:00").toLocaleDateString("de-DE")}</div></div><strong>${Math.floor(r.minutes/60)} Std. ${r.minutes%60} Min.</strong></div>`).join("")}</div>`:"<div class='empty'>Noch keine Trainingszeiten.</div>"}</div><div class="card"><h3>📊 Öffentliche Spielerstatistik</h3>${d.players.length?`<div class="list">${d.players.slice(0,50).map((p,i)=>`<div class="item"><div><b>${i+1}. ${esc(p.name)}</b><div class="muted">${p.games} Partien · ${p.users.length} Nutzer</div></div><strong>${p.points} Punkte</strong></div>`).join("")}</div>`:"<div class='empty'>Noch keine Spielerstatistiken.</div>"}</div>`}catch(err){$("#globalBox").innerHTML=`<div class="card"><b>Globale Daten konnten nicht geladen werden.</b><div class="muted">${esc(err.message)}</div></div>`}}function rules(e){e.innerHTML=`<h2>Regeln</h2><div class="card"><h3>DPV Reglement 2018</h3><p>Das von dir bereitgestellte Regelwerk kann hier geöffnet werden.</p><p><a href="https://deutscher-petanque-verband.de/wp-content/uploads/2020/03/Reglement_2018.pdf" target="_blank">Reglement 2018 als PDF öffnen</a></p><h3>App-Regeln</h3><p>Partien werden bis 13 Punkte gespielt. Pro Aufnahme können in dieser App maximal 15 Punkte erfasst werden.</p></div>`}
+function settings(e){e.innerHTML=`<h2>Einstellungen</h2><div class="card"><p><b>Spielziel:</b> 13 Punkte</p><p><b>Max. Punkte pro Aufnahme:</b> 15 (fest eingestellt)</p>${auth?`<p><b>Online-Konto:</b> ${esc(auth.user.username)}</p><button class="btn secondary" onclick="logoutUser()">Abmelden</button>`:`<p class="muted">Noch nicht online angemeldet.</p><button class="btn primary" onclick="go('home')">Online-Zugang</button>`}</div><div class="card"><h3>Gemeinsame Daten</h3><p class="muted">Angemeldet werden deine Statistiken, Trainingszeiten und Tireur-Ergebnisse automatisch synchronisiert.</p><button class="btn danger" onclick="wipe()">Lokale Daten löschen</button></div>`}
+
+const VIDEO_DB="petanque_video_db";
+function videoDB(){
+ return new Promise((resolve,reject)=>{
+   const req=indexedDB.open(VIDEO_DB,1);
+   req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("videos"))req.result.createObjectStore("videos",{keyPath:"id",autoIncrement:true})};
+   req.onsuccess=()=>resolve(req.result);
+   req.onerror=()=>reject(req.error);
+ });
+}
+async function saveVideoRecord(title,bullets,file){
+ const db=await videoDB();
+ return new Promise((resolve,reject)=>{
+   const tx=db.transaction("videos","readwrite");
+   tx.objectStore("videos").add({title,bullets,file,date:Date.now()});
+   tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+ });
+}
+async function getVideos(){
+ const db=await videoDB();
+ return new Promise((resolve,reject)=>{
+   const tx=db.transaction("videos","readonly"), req=tx.objectStore("videos").getAll();
+   req.onsuccess=()=>resolve(req.result||[]); req.onerror=()=>reject(req.error);
+ });
+}
+async function deleteVideo(id){
+ if(!confirm("Video wirklich löschen?"))return;
+ const db=await videoDB();
+ await new Promise((resolve,reject)=>{
+   const tx=db.transaction("videos","readwrite");
+   tx.objectStore("videos").delete(id); tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+ });
+ videos($("#app"));
+}
+async function addVideo(){
+ const file=$("#videoFile").files[0];
+ if(!file)return alert("Bitte zuerst ein Video aus der Galerie auswählen.");
+ if(!file.type.startsWith("video/"))return alert("Bitte eine Videodatei auswählen.");
+ const title=$("#videoTitle").value.trim();
+ if(!title)return alert("Bitte eine Überschrift eingeben.");
+ const bullets=$("#videoBullets").value.split(/\n/).map(x=>x.trim()).filter(Boolean);
+ await saveVideoRecord(title,bullets,file);
+ $("#videoFile").value=""; $("#videoTitle").value=""; $("#videoBullets").value="";
+ videos($("#app"));
+}
+async function videos(e){
+ e.innerHTML=`<h2>Videos</h2>
+ <div class="card">
+   <h3>Neues Video hinzufügen</h3>
+   <p class="muted">Video direkt aus der iPad-Galerie auswählen und mit Überschrift und Stichpunkten speichern.</p>
+   <label class="muted"><b>Video</b></label>
+   <input id="videoFile" type="file" accept="video/*" style="margin:8px 0 14px">
+   <label class="muted"><b>Überschrift</b></label>
+   <input id="videoTitle" type="text" placeholder="z. B. Legetechnik">
+   <label class="muted"><b>Stichpunkte</b></label>
+   <textarea id="videoBullets" rows="5" placeholder="• Fußstellung&#10;• Arm ruhig halten&#10;• Kugel sauber ausstoßen"></textarea>
+   <button class="btn primary full" style="margin-top:10px" onclick="addVideo()">Video speichern</button>
+ </div>
+ <div id="videoList" class="grid"><div class="card"><span class="muted">Videos werden geladen …</span></div></div>`;
+ try{
+   const list=await getVideos();
+   const box=$("#videoList");
+   if(!list.length){box.innerHTML=`<div class="card"><span class="muted">Noch keine Videos gespeichert.</span></div>`;return;}
+   box.innerHTML=list.sort((a,b)=>b.date-a.date).map(v=>{
+     const url=URL.createObjectURL(v.file);
+     const bullets=v.bullets.map(x=>`<li>${esc(x.replace(/^•\s*/,""))}</li>`).join("");
+     return `<div class="card">
+       <h3 style="margin-top:0">${esc(v.title)}</h3>
+       <video controls playsinline preload="metadata" src="${url}" style="width:100%;border-radius:14px;background:#000"></video>
+       ${bullets?`<ul style="padding-left:22px">${bullets}</ul>`:""}
+       <button class="btn danger" onclick="deleteVideo(${v.id})">Video löschen</button>
+     </div>`;
+   }).join("");
+ }catch(err){
+   $("#videoList").innerHTML=`<div class="card"><b>Videos konnten nicht geladen werden.</b><div class="muted">${esc(String(err))}</div></div>`;
+ }
+}
+function more(e){e.innerHTML=`<h2>Mehr</h2><div class="grid">${tile("👤","Spieler","Anlegen und bearbeiten","players")}${tile("👥","Teams","Spieler zuordnen","teams")}${tile("📊","Statistik","Spieler und Punkte","stats")}${tile("🕘","Historie","Alle Ergebnisse","history")}${tile("📅","Wochenübersicht","Zeit pro Tag","week")}${tile("🎯","Tireur","Rangliste 0–72","tireur")}${tile("🌍","Globale Rangliste","Alle Nutzer","global")}${tile("🎥","Videos","Training & Technik","videos")}${tile("📖","Regeln","Regelbereich","rules")}${tile("⚙️","Einstellungen","App-Einstellungen","settings")}</div>`}
+function toast(x){alert(x)}
+function wipe(){if(confirm("Wirklich alle App-Daten löschen?")){localStorage.removeItem(KEY);location.reload()}}
+$("#menu").onclick=()=>$("#drawer").classList.remove("hidden");$("#close").onclick=()=>$("#drawer").classList.add("hidden");$$(".tab button").forEach(b=>b.onclick=()=>go(b.dataset.r));render();bootAuth();
+</script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});</script></body>
+</html>
