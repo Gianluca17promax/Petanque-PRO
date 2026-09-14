@@ -11,7 +11,7 @@ const now=()=>Date.now(),enc=new TextEncoder();
 function b64u(bytes){return btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
 function unb64u(s){s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return Uint8Array.from(atob(s),c=>c.charCodeAt(0))}
 async function sha256(text){return b64u(new Uint8Array(await crypto.subtle.digest("SHA-256",enc.encode(text))))}
-async function hashPassword(password,salt){const key=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:unb64u(salt),iterations:120000,hash:"SHA-256"},key,256);return b64u(new Uint8Array(bits))}
+async function hashPassword(password,salt){const key=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:unb64u(salt),iterations:100000,hash:"SHA-256"},key,256);return b64u(new Uint8Array(bits))}
 async function makePassword(password){const salt=b64u(crypto.getRandomValues(new Uint8Array(16)));return `${salt}.${await hashPassword(password,salt)}`}
 async function verifyPassword(password,stored){const [salt,want]=String(stored).split(".");if(!salt||!want)return false;return (await hashPassword(password,salt))===want}
 function token(){return b64u(crypto.getRandomValues(new Uint8Array(32)))}
