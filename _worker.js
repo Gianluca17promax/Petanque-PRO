@@ -18,6 +18,12 @@ function token(){return b64u(crypto.getRandomValues(new Uint8Array(32)))}
 function usernameOk(x){return /^[A-Za-z0-9ÄÖÜäöüß _.-]{2,40}$/.test(x)}
 async function authUser(request,env){const h=request.headers.get("authorization")||"";if(!h.startsWith("Bearer "))return null;const raw=h.slice(7),th=await sha256(raw);return await env.DB.prepare("SELECT s.user_id,u.username FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?").bind(th,now()).first()}
 async function allStates(env){const r=await env.DB.prepare("SELECT s.user_id,s.data_json,u.username FROM states s JOIN users u ON u.id=s.user_id").all();return (r.results||[]).map(x=>({user_id:x.user_id,username:x.username,data:JSON.parse(x.data_json||"{}")}))}
+async function migrateSharedState(env,userId,data){
+ const statements=[];
+ for(const r of(data.tireur||[])){const clientId=String(r.id||crypto.randomUUID());const hits=Number(r.hits);if(r.name&&Number.isInteger(hits)&&hits>=0&&hits<=72)statements.push(env.DB.prepare("INSERT OR IGNORE INTO tireur_results(id,user_id,client_id,player_name,hits,result_date,created_at) VALUES(?,?,?,?,?,?,?)").bind(crypto.randomUUID(),userId,clientId,String(r.name).trim(),hits,String(r.date||new Date().toISOString()),now()))}
+ for(const r of(data.training||[])){const clientId=String(r.id||crypto.randomUUID());const minutes=Number(r.minutes);if(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(r.date))&&Number.isInteger(minutes)&&minutes>0)statements.push(env.DB.prepare("INSERT OR IGNORE INTO training_records(id,user_id,client_id,training_date,minutes,created_at) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),userId,clientId,String(r.date),minutes,now()))}
+ if(statements.length)await env.DB.batch(statements);
+}
 export async function onRequest(context){
  const {request,env}=context;
  if(!env.DB)return json({error:"D1 ist noch nicht mit der App verbunden. In Cloudflare Pages unter Settings → Bindings eine D1-Datenbank als DB binden und neu deployen."},503);
@@ -46,12 +52,40 @@ export async function onRequest(context){
   if(path==="logout"&&request.method==="POST"){if(user){const raw=(request.headers.get("authorization")||"").slice(7);await env.DB.prepare("DELETE FROM sessions WHERE token_hash=?").bind(await sha256(raw)).run()}return json({ok:true})}
   if(!user)return json({error:"Bitte zuerst anmelden."},401);
   if(path==="state"&&request.method==="GET"){const row=await env.DB.prepare("SELECT data_json,updated_at FROM states WHERE user_id=?").bind(user.user_id).first();return json({data:row?JSON.parse(row.data_json):null,updated_at:row?.updated_at||0})}
-  if(path==="state"&&request.method==="PUT"){const b=await request.json(),data=b.data||{};delete data.auth;await env.DB.prepare("INSERT INTO states(user_id,data_json,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET data_json=excluded.data_json,updated_at=excluded.updated_at").bind(user.user_id,JSON.stringify(data),now()).run();return json({ok:true,updated_at:now()})}
+  if(path==="state"&&request.method==="PUT"){const b=await request.json(),data=b.data||{};delete data.auth;await migrateSharedState(env,user.user_id,data);await env.DB.prepare("INSERT INTO states(user_id,data_json,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET data_json=excluded.data_json,updated_at=excluded.updated_at").bind(user.user_id,JSON.stringify(data),now()).run();return json({ok:true,updated_at:now()})}
+  if(path==="tireur"&&request.method==="POST"){
+   const b=await request.json(),name=String(b.name||"").trim(),hits=Number(b.hits),date=String(b.date||new Date().toISOString());
+   if(!name||!Number.isInteger(hits)||hits<0||hits>72)return json({error:"Spielername und 0 bis 72 Treffer sind erforderlich."},400);
+   const clientId=String(b.client_id||crypto.randomUUID()),resultId=crypto.randomUUID();
+   await env.DB.prepare("INSERT INTO tireur_results(id,user_id,client_id,player_name,hits,result_date,created_at) VALUES(?,?,?,?,?,?,?)").bind(resultId,user.user_id,clientId,name,hits,date,now()).run();
+   return json({ok:true,id:resultId,client_id:clientId});
+  }
+  if(path.startsWith("tireur/")&&request.method==="DELETE"){
+   const id=decodeURIComponent(path.slice(7));const r=await env.DB.prepare("DELETE FROM tireur_results WHERE id=? AND user_id=?").bind(id,user.user_id).run();if(!r.success||!r.meta?.changes)return json({error:"Ergebnis nicht gefunden oder nicht dein Ergebnis."},404);return json({ok:true});
+  }
+  if(path==="training"&&request.method==="POST"){
+   const b=await request.json(),date=String(b.date||""),minutes=Number(b.minutes);
+   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||!Number.isInteger(minutes)||minutes<=0)return json({error:"Datum und eine positive Trainingsdauer sind erforderlich."},400);
+   const clientId=String(b.client_id||crypto.randomUUID());await env.DB.prepare("INSERT INTO training_records(id,user_id,client_id,training_date,minutes,created_at) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),user.user_id,clientId,date,minutes,now()).run();return json({ok:true,client_id:clientId});
+  }
+  if(path==="teams"&&request.method==="GET"){
+   const r=await env.DB.prepare("SELECT t.id,t.name,t.owner_id,u.username owner_name,COALESCE(SUM(tr.minutes),0) total_minutes FROM teams t JOIN users u ON u.id=t.owner_id LEFT JOIN team_memberships tm ON tm.team_id=t.id LEFT JOIN training_records tr ON tr.user_id=tm.user_id GROUP BY t.id ORDER BY lower(t.name)").all();
+   const teams=[];for(const t of(r.results||[])){const m=await env.DB.prepare("SELECT u.id,u.username,COALESCE(SUM(tr.minutes),0) minutes FROM team_memberships tm JOIN users u ON u.id=tm.user_id LEFT JOIN training_records tr ON tr.user_id=tm.user_id WHERE tm.team_id=? GROUP BY u.id ORDER BY lower(u.username)").bind(t.id).all();teams.push({...t,members:m.results||[],is_member:(await env.DB.prepare("SELECT 1 FROM team_memberships WHERE team_id=? AND user_id=?").bind(t.id,user.user_id).first())?1:0})}return json({teams});
+  }
+  if(path==="teams"&&request.method==="POST"){
+   const name=String((await request.json()).name||"").trim();if(!name||name.length>80)return json({error:"Bitte einen Teamnamen mit maximal 80 Zeichen eingeben."},400);const id=crypto.randomUUID();await env.DB.batch([env.DB.prepare("INSERT INTO teams(id,owner_id,name,created_at) VALUES(?,?,?,?)").bind(id,user.user_id,name,now()),env.DB.prepare("INSERT INTO team_memberships(team_id,user_id,joined_at) VALUES(?,?,?)").bind(id,user.user_id,now())]);return json({ok:true,id});
+  }
+  const teamMatch=path.match(/^teams\\/([^/]+)\\/(join|leave)$/);if(teamMatch&&request.method==="POST"){
+   const teamId=decodeURIComponent(teamMatch[1]),action=teamMatch[2];if(!(await env.DB.prepare("SELECT id FROM teams WHERE id=?").bind(teamId).first()))return json({error:"Team nicht gefunden."},404);if(action==="join")await env.DB.prepare("INSERT OR IGNORE INTO team_memberships(team_id,user_id,joined_at) VALUES(?,?,?)").bind(teamId,user.user_id,now()).run();else await env.DB.prepare("DELETE FROM team_memberships WHERE team_id=? AND user_id=?").bind(teamId,user.user_id).run();return json({ok:true});
+  }
   if(path==="global"&&request.method==="GET"){
    const rows=await allStates(env),rank=[],training=[],playerMap=new Map();
+   const centralTireur=await env.DB.prepare("SELECT r.id,r.player_name name,r.hits,r.result_date date,u.username user,r.user_id FROM tireur_results r JOIN users u ON u.id=r.user_id ORDER BY r.hits DESC,r.result_date ASC").all();
+   const centralTraining=await env.DB.prepare("SELECT r.id,r.training_date date,r.minutes,u.username user,r.user_id FROM training_records r JOIN users u ON u.id=r.user_id ORDER BY r.training_date DESC").all();
+   for(const r of(centralTireur.results||[]))rank.push(r);for(const r of(centralTraining.results||[]))training.push(r);
    for(const x of rows){const d=x.data||{};for(const r of(d.tireur||[]))rank.push({id:`${x.user_id}-${r.id}`,name:r.name||"Unbekannt",hits:+r.hits||0,date:r.date||"",user:x.username});for(const tr of(d.training||[]))training.push({id:`${x.user_id}-${tr.id}`,date:tr.date,minutes:+tr.minutes||0,user:x.username});for(const p of(d.players||[])){const key=String(p.name||"").trim().toLocaleLowerCase("de-DE");if(!key)continue;const z=playerMap.get(key)||{name:p.name,points:0,games:0,users:new Set()};z.points+=+p.points||0;z.users.add(x.username);playerMap.set(key,z)}for(const g of(d.games||[])){for(const pid of[...(g.bluePlayers||[]),...(g.redPlayers||[])]){const p=(d.players||[]).find(q=>q.id===pid);if(!p)continue;const key=String(p.name||"").trim().toLocaleLowerCase("de-DE");const z=playerMap.get(key)||{name:p.name,points:0,games:0,users:new Set()};z.games++;z.users.add(x.username);playerMap.set(key,z)}}}
-   rank.sort((a,b)=>b.hits-a.hits||a.date.localeCompare(b.date));const best=new Map();for(const r of rank){const k=r.name.toLocaleLowerCase("de-DE"),old=best.get(k);if(!old||r.hits>old.hits)best.set(k,r)}const leaderboard=[...best.values()].sort((a,b)=>b.hits-a.hits);training.sort((a,b)=>String(b.date).localeCompare(String(a.date)));const players=[...playerMap.values()].map(x=>({...x,users:[...x.users]})).sort((a,b)=>b.points-a.points);
-   return json({users:rows.length,leaderboard,training,players});
+  rank.sort((a,b)=>b.hits-a.hits||String(a.date).localeCompare(String(b.date)));const leaderboard=rank;training.sort((a,b)=>String(b.date).localeCompare(String(a.date)));const players=[...playerMap.values()].map(x=>({...x,users:[...x.users]})).sort((a,b)=>b.points-a.points);
+  return json({users:rows.length,leaderboard,training,players});
   }
   return json({error:"API-Endpunkt nicht gefunden."},404);
  }catch(e){return json({error:e?.message||"Serverfehler"},500)}
