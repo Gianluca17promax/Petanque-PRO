@@ -21,7 +21,7 @@ async function allStates(env){const r=await env.DB.prepare("SELECT s.user_id,s.d
 async function migrateSharedState(env,userId,data){
  const statements=[];
  for(const r of(data.tireur||[])){const clientId=String(r.id||crypto.randomUUID());const hits=Number(r.hits);if(r.name&&Number.isInteger(hits)&&hits>=0&&hits<=72)statements.push(env.DB.prepare("INSERT OR IGNORE INTO tireur_results(id,user_id,client_id,player_name,hits,result_date,created_at) VALUES(?,?,?,?,?,?,?)").bind(crypto.randomUUID(),userId,clientId,String(r.name).trim(),hits,String(r.date||new Date().toISOString()),now()))}
- for(const r of(data.training||[])){const clientId=String(r.id||crypto.randomUUID());const minutes=Number(r.minutes);if(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(r.date))&&Number.isInteger(minutes)&&minutes>0)statements.push(env.DB.prepare("INSERT OR IGNORE INTO training_records(id,user_id,client_id,training_date,minutes,created_at) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),userId,clientId,String(r.date),minutes,now()))}
+ for(const r of(data.training||[])){const clientId=String(r.id||crypto.randomUUID());const minutes=Number(r.minutes);if(/^\d{4}-\d{2}-\d{2}$/.test(String(r.date))&&Number.isInteger(minutes)&&minutes>0)statements.push(env.DB.prepare("INSERT OR IGNORE INTO training_records(id,user_id,client_id,training_date,minutes,created_at) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),userId,clientId,String(r.date),minutes,now()))}
  if(statements.length)await env.DB.batch(statements);
 }
 export async function onRequest(context){
@@ -61,11 +61,11 @@ export async function onRequest(context){
    return json({ok:true,id:resultId,client_id:clientId});
   }
   if(path.startsWith("tireur/")&&request.method==="DELETE"){
-   const id=decodeURIComponent(path.slice(7));const r=await env.DB.prepare("DELETE FROM tireur_results WHERE id=? AND user_id=?").bind(id,user.user_id).run();if(!r.success||!r.meta?.changes)return json({error:"Ergebnis nicht gefunden oder nicht dein Ergebnis."},404);return json({ok:true});
+   const id=decodeURIComponent(path.slice(7));const r=await env.DB.prepare("DELETE FROM tireur_results WHERE (id=? OR client_id=?) AND user_id=?").bind(id,id,user.user_id).run();if(!r.success||!r.meta?.changes)return json({error:"Ergebnis nicht gefunden oder nicht dein Ergebnis."},404);return json({ok:true});
   }
   if(path==="training"&&request.method==="POST"){
    const b=await request.json(),date=String(b.date||""),minutes=Number(b.minutes);
-   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||!Number.isInteger(minutes)||minutes<=0)return json({error:"Datum und eine positive Trainingsdauer sind erforderlich."},400);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isInteger(minutes)||minutes<=0)return json({error:"Datum und eine positive Trainingsdauer sind erforderlich."},400);
    const clientId=String(b.client_id||crypto.randomUUID());await env.DB.prepare("INSERT INTO training_records(id,user_id,client_id,training_date,minutes,created_at) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),user.user_id,clientId,date,minutes,now()).run();return json({ok:true,client_id:clientId});
   }
   if(path==="teams"&&request.method==="GET"){
@@ -75,7 +75,7 @@ export async function onRequest(context){
   if(path==="teams"&&request.method==="POST"){
    const name=String((await request.json()).name||"").trim();if(!name||name.length>80)return json({error:"Bitte einen Teamnamen mit maximal 80 Zeichen eingeben."},400);const id=crypto.randomUUID();await env.DB.batch([env.DB.prepare("INSERT INTO teams(id,owner_id,name,created_at) VALUES(?,?,?,?)").bind(id,user.user_id,name,now()),env.DB.prepare("INSERT INTO team_memberships(team_id,user_id,joined_at) VALUES(?,?,?)").bind(id,user.user_id,now())]);return json({ok:true,id});
   }
-  const teamMatch=path.match(/^teams\\/([^/]+)\\/(join|leave)$/);if(teamMatch&&request.method==="POST"){
+  const teamMatch=path.match(/^teams\/([^/]+)\/(join|leave)$/);if(teamMatch&&request.method==="POST"){
    const teamId=decodeURIComponent(teamMatch[1]),action=teamMatch[2];if(!(await env.DB.prepare("SELECT id FROM teams WHERE id=?").bind(teamId).first()))return json({error:"Team nicht gefunden."},404);if(action==="join")await env.DB.prepare("INSERT OR IGNORE INTO team_memberships(team_id,user_id,joined_at) VALUES(?,?,?)").bind(teamId,user.user_id,now()).run();else await env.DB.prepare("DELETE FROM team_memberships WHERE team_id=? AND user_id=?").bind(teamId,user.user_id).run();return json({ok:true});
   }
   if(path==="global"&&request.method==="GET"){
