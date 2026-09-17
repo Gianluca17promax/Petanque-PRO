@@ -249,149 +249,140 @@ function setGoal(){st.goal=Math.max(0,+$("#goal").value||0);save();render()}
 function tireur(e){let sorted=[...st.tireur].sort((a,b)=>b.hits-a.hits);e.innerHTML=`<div class="row"><h2>Tireur-Turnier</h2><button class="btn secondary" onclick="go('global')">🌍 Globale Rangliste</button></div><div class="card"><select id="tirPlayer"><option value="">Spieler auswählen</option>${st.players.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select><input id="hits" type="number" min="0" max="72" value="0" style="margin-top:10px"><button class="btn primary full" style="margin-top:10px" onclick="saveTireur()">Ergebnis speichern</button>${auth?`<p class="muted">Das Ergebnis wird online gespeichert und fließt in die globale Rangliste ein.</p>`:`<p class="muted">Ohne Anmeldung bleibt das Ergebnis auf diesem Gerät.</p>`}</div><div class="list">${sorted.length?sorted.map((r,i)=>`<div class="item"><div><b>Platz ${i+1} · ${esc(r.name)}</b><div class="muted">${r.hits}/72 Treffer</div></div><button class="btn danger" onclick="delTireur('${r.id}')">Löschen</button></div>`).join(""):"<div class='empty'>Noch keine Ergebnisse.</div>"}</div>`}
 async function saveTireur(){let p=st.players.find(x=>x.id===$("#tirPlayer").value),h=+$("#hits").value;if(!p)return alert("Bitte Spieler auswählen.");if(h<0||h>72)return alert("0 bis 72 Treffer eingeben.");const result={id:id(),name:p.name,hits:h,date:new Date().toISOString()};try{if(auth)await api("tireur",{method:"POST",body:JSON.stringify({client_id:result.id,name:result.name,hits:result.hits,date:result.date})});st.tireur.push(result);save();toast("Tireur-Ergebnis erfolgreich gespeichert.");render()}catch(e){alert(`Tireur-Ergebnis konnte nicht gespeichert werden: ${e.message}`)}}
 async function delTireur(x){try{if(auth)await api(`tireur/${encodeURIComponent(x)}`,{method:"DELETE"});st.tireur=st.tireur.filter(r=>r.id!==x);save();toast("Ergebnis gelöscht.");render()}catch(e){alert(`Ergebnis konnte nicht gelöscht werden: ${e.message}`)}}
+async let globalData=null;
+let globalData=null;
+
 async function global(e){
-  e.innerHTML=`
-    <div class="row">
-      <h2>🌍 Globale Rangliste</h2>
-      <button class="btn secondary" onclick="render()">↻ Aktualisieren</button>
-    </div>
-
-    <div class="card">
-      <b>Gemeinsame Vereinsdaten</b>
-      <div class="muted">
-        Tireur-Ergebnisse, Wochen-Trainingszeiten und öffentliche Spielerstatistiken aller angemeldeten Nutzer.
-      </div>
-    </div>
-
-    <div id="globalBox">
-      <div class="card">Daten werden geladen …</div>
-    </div>`;
-
-  if(!auth){
-    $("#globalBox").innerHTML=`
-      <div class="card">
-        <b>Anmeldung erforderlich</b>
-        <p class="muted">
-          Melde dich an, damit die gemeinsame Rangliste geladen werden kann.
-        </p>
-        <button class="btn primary" onclick="go('home')">Zur Anmeldung</button>
-      </div>`;
-    return;
-  }
+  e?.preventDefault?.();
 
   try{
     const d=await api("global");
+    globalData=d;
 
-    const weekFrom=d.weekFrom
-      ? new Date(d.weekFrom+"T00:00:00").toLocaleDateString("de-DE")
-      : "";
-
-    const weekTo=d.weekTo
-      ? new Date(d.weekTo+"T00:00:00").toLocaleDateString("de-DE")
-      : "";
-
+    const weekFrom=d.weekFrom||"";
+    const weekTo=d.weekTo||"";
     const weekly=d.weeklyTraining||[];
 
     $("#globalBox").innerHTML=`
+      <div class="card">
+        <h2>🌍 Globale Rangliste</h2>
+        <p class="muted">Alle öffentlichen Ergebnisse</p>
+      </div>
 
       <div class="card">
         <h3>⏱ Trainingszeit – aktuelle Woche</h3>
-
-        <div class="muted" style="margin-bottom:12px">
-          Montag ${weekFrom} – Sonntag ${weekTo}
-        </div>
-
+        <p class="muted">Montag ${esc(weekFrom)} – Sonntag ${esc(weekTo)}</p>
         ${
           weekly.length
-          ? `<div class="list">
-              ${weekly.map((p,i)=>`
-                <div class="item">
-                  <div>
-                    <b>${i+1}. ${esc(p.username)}</b>
-                  </div>
-                  <strong>
-                    ${Math.floor(p.minutes/60)} Std.
-                    ${p.minutes%60} Min.
-                  </strong>
+          ? weekly.map((p,i)=>`
+              <div class="item">
+                <div>
+                  <b>${i+1}. ${esc(p.username)}</b>
                 </div>
-              `).join("")}
-            </div>`
-          : `<div class="empty">
-              Diese Woche wurden noch keine Trainingszeiten gespeichert.
-            </div>`
+                <div>
+                  <b>${Math.floor(Number(p.minutes||0)/60)} Std. ${Number(p.minutes||0)%60} Min.</b>
+                </div>
+              </div>
+            `).join("")
+          : `<div class="empty">Diese Woche wurden noch keine Trainingszeiten eingetragen.</div>`
         }
       </div>
 
       <div class="card">
         <h3>🏆 Tireur – globale Rangliste</h3>
-
         ${
-          d.leaderboard.length
-          ? `<div class="list">
-              ${d.leaderboard.map((r,i)=>`
-                <div class="item">
-                  <div>
-                    <b>
-                      ${i===0?"🥇 ":i===1?"🥈 ":i===2?"🥉 ":""}
-                      ${i+1}. ${esc(r.name)}
-                    </b>
-                    <div class="muted">
-                      ${esc(r.username||"")}
-                      ${r.date
-                        ? " · "+new Date(r.date).toLocaleDateString("de-DE")
-                        : ""}
-                    </div>
-                  </div>
-                  <strong>${r.hits}/72</strong>
+          (d.leaderboard||[]).length
+          ? (d.leaderboard||[]).map((p,i)=>`
+              <div class="item">
+                <div>
+                  <b>${i+1}. ${esc(p.name)}</b>
+                  <div class="muted">${esc(p.date||"")}</div>
                 </div>
-              `).join("")}
-            </div>`
-          : `<div class="empty">
-              Noch keine globalen Tireur-Ergebnisse.
-            </div>`
+                <div><b>${p.hits}</b> Punkte</div>
+              </div>
+            `).join("")
+          : `<div class="empty">Noch keine Tireur-Ergebnisse.</div>`
         }
       </div>
 
       <div class="card">
         <h3>📊 Öffentliche Spielerstatistik</h3>
+        <p class="muted">Tippe auf einen Spieler für die persönlichen Statistiken.</p>
 
         ${
-          d.players.length
-          ? `<div class="list">
-              ${d.players.slice(0,50).map((p,i)=>`
-                <div class="item">
-                  <div>
-                    <b>${i+1}. ${esc(p.name)}</b>
-                    <div class="muted">
-                      ${p.games} Partien · ${p.users.length} Nutzer
-                    </div>
-                  </div>
-
-                  <div style="text-align:right">
-                    <b>${p.points} Punkte</b>
-                    <div class="muted">
-                      ${(+p.average||0).toFixed(2)} Punkte/Spiel
-                      · ${(+p.share||0).toFixed(1)}% gebrachte Kugeln
-                    </div>
+          (d.players||[]).length
+          ? (d.players||[]).map((p,i)=>`
+              <div class="item" style="cursor:pointer" onclick="publicPlayerProfile(${i})">
+                <div>
+                  <b>${esc(p.name)}</b>
+                  <div class="muted">${p.games} Partien · ${p.users?.length||0} Nutzer</div>
+                </div>
+                <div style="text-align:right">
+                  <b>${Number(p.points||0)}</b> Punkte
+                  <div class="muted">
+                    Ø ${Number(p.average||0).toFixed(2)} ·
+                    ${Number(p.share||0).toFixed(1)} % gebrachte Kugeln
                   </div>
                 </div>
-              `).join("")}
-            </div>`
-          : `<div class="empty">
-              Noch keine Spielerstatistiken.
-            </div>`
+              </div>
+            `).join("")
+          : `<div class="empty">Noch keine Spielerstatistiken.</div>`
         }
       </div>
     `;
-
   }catch(err){
     $("#globalBox").innerHTML=`
       <div class="card">
         <b>Globale Daten konnten nicht geladen werden.</b>
-        <div class="muted">${esc(err.message)}</div>
-      </div>`;
+        <div class="muted">${esc(err.message||String(err))}</div>
+      </div>
+    `;
   }
 }
+
+function publicPlayerProfile(i){
+  const p=globalData?.players?.[i];
+  if(!p) return;
+
+  const mins=Number(p.trainingMinutes||0);
+
+  $("#modal").innerHTML=`
+    <div class="winner" onclick="if(event.target===this) $('#modal').innerHTML=''">
+      <div class="winnerbox">
+        <div class="row">
+          <h2>👤 ${esc(p.name)}</h2>
+          <button onclick="$('#modal').innerHTML=''">×</button>
+        </div>
+
+        <div class="statgrid">
+          <div class="stat">
+            <b>${p.games}</b>
+            Partien
+          </div>
+
+          <div class="stat">
+            <b>${Number(p.average||0).toFixed(2)}</b>
+            Punkte/Partie
+          </div>
+
+          <div class="stat">
+            <b>${Number(p.share||0).toFixed(1)} %</b>
+            gebrachte Kugeln
+          </div>
+
+          <div class="stat">
+            <b>${Math.floor(mins/60)} Std. ${mins%60} Min.</b>
+            Training gesamt
+          </div>
+        </div>
+
+        <div class="muted">Öffentlich sichtbare Statistik</div>
+      </div>
+    </div>
+  `;
+}
+
+function rules(e){e.innerHTML=`<h2>Regeln</h2><div class="card"><h3>DPV Reglement 2018</h3><p>Das von dir bereitgestellte Regelwerk kann hier geöffnet werden.</p><p><a href="https://deutscher-petanque-verband.de/wp-content/uploads/2020/03/Reglement_2018.pdf" target="_blank">Reglement 2018 als PDF öffnen</a></p><h3>App-Regeln</h3><p>Partien werden bis 13 Punkte gespielt. Pro Aufnahme können in dieser App maximal 15 Punkte erfasst werden.</p></div>`}
 function settings(e){e.innerHTML=`<h2>Einstellungen</h2><div class="card"><p><b>Spielziel:</b> 13 Punkte</p><p><b>Max. Punkte pro Aufnahme:</b> 15 (fest eingestellt)</p>${auth?`<p><b>Online-Konto:</b> ${esc(auth.user.username)}</p><button class="btn secondary" onclick="logoutUser()">Abmelden</button>`:`<p class="muted">Noch nicht online angemeldet.</p><button class="btn primary" onclick="go('home')">Online-Zugang</button>`}</div><div class="card"><h3>Gemeinsame Daten</h3><p class="muted">Angemeldet werden deine Statistiken, Trainingszeiten und Tireur-Ergebnisse automatisch synchronisiert.</p><button class="btn danger" onclick="wipe()">Lokale Daten löschen</button></div>`}
 
 const VIDEO_DB="petanque_video_db";
