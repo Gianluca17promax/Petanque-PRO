@@ -127,8 +127,7 @@ export async function onRequest(context){
   return json({
     users:rows.length,
     leaderboard,
-    training,
-    players,
+    training;
     weeklyTraining:weeklyPlayers.results||[],
     weekFrom:from,
     weekTo:to
