@@ -79,14 +79,61 @@ export async function onRequest(context){
    const teamId=decodeURIComponent(teamMatch[1]),action=teamMatch[2];if(!(await env.DB.prepare("SELECT id FROM teams WHERE id=?").bind(teamId).first()))return json({error:"Team nicht gefunden."},404);if(action==="join")await env.DB.prepare("INSERT OR IGNORE INTO team_memberships(team_id,user_id,joined_at) VALUES(?,?,?)").bind(teamId,user.user_id,now()).run();else await env.DB.prepare("DELETE FROM team_memberships WHERE team_id=? AND user_id=?").bind(teamId,user.user_id).run();return json({ok:true});
   }
   if(path==="global"&&request.method==="GET"){
-   const rows=await allStates(env),rank=[],training=[],playerMap=new Map();
-   const centralTireur=await env.DB.prepare("SELECT r.id,r.player_name name,r.hits,r.result_date date,u.username user,r.user_id FROM tireur_results r JOIN users u ON u.id=r.user_id ORDER BY r.hits DESC,r.result_date ASC").all();
-   const centralTraining=await env.DB.prepare("SELECT r.id,r.training_date date,r.minutes,u.username user,r.user_id FROM training_records r JOIN users u ON u.id=r.user_id ORDER BY r.training_date DESC").all();
-   for(const r of(centralTireur.results||[]))rank.push(r);for(const r of(centralTraining.results||[]))training.push(r);
-  for(const x of rows){const d=x.data||{};for(const r of(d.tireur||[]))rank.push({id:`${x.user_id}-${r.id}`,name:r.name||"Unbekannt",hits:+r.hits||0,date:r.date||"",user:x.username});for(const tr of(d.training||[]))training.push({id:`${x.user_id}-${tr.id}`,date:tr.date,minutes:+tr.minutes||0,user:x.username});for(const p of(d.players||[])){const key=String(p.name||"").trim().toLocaleLowerCase("de-DE");if(!key)continue;const z=playerMap.get(key)||{name:p.name,points:0,games:0,balls:0,brought:0,users:new Set()};z.points+=+p.points||0;z.users.add(x.username);playerMap.set(key,z)}for(const g of(d.games||[])){for(const pid of[...(g.bluePlayers||[]),...(g.redPlayers||[])]){const p=(d.players||[]).find(q=>q.id===pid);if(!p)continue;const key=String(p.name||"").trim().toLocaleLowerCase("de-DE");const z=playerMap.get(key)||{name:p.name,points:0,games:0,balls:0,brought:0,users:new Set()};const s=g.playerStats?.[pid];z.games++;z.points+=s?0:(+p.points||0);z.balls+=s?.balls||0;z.brought+=s?.brought||0;z.users.add(x.username);playerMap.set(key,z)}}}
-  rank.sort((a,b)=>b.hits-a.hits||String(a.date).localeCompare(String(b.date)));const leaderboard=rank;training.sort((a,b)=>String(b.date).localeCompare(String(a.date)));const players=[...playerMap.values()].map(x=>({...x,average:x.games?x.points/x.games:0,share:x.balls?x.brought/x.balls*100:0,users:[...x.users]})).sort((a,b)=>b.points-a.points);
-  return json({users:rows.length,leaderboard,training,players});
+  const rows=await allStates(env),rank=[],training=[],playerMap=new Map();
+
+  const today=new Date();
+  const day=(today.getUTCDay()+6)%7;
+  const monday=new Date(Date.UTC(
+    today.getUTCFullYear(),
+    today.getUTCMonth(),
+    today.getUTCDate()-day
+  ));
+  const sunday=new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate()+6);
+
+  const from=monday.toISOString().slice(0,10);
+  const to=sunday.toISOString().slice(0,10);
+
+  const centralTireur=await env.DB.prepare(
+    "SELECT r.id,r.player_name name,r.hits,r.result_date date,u.username FROM tireur_results r JOIN users u ON u.id=r.user_id"
+  ).all();
+
+  const centralTraining=await env.DB.prepare(
+    "SELECT r.id,r.training_date date,r.minutes,u.username FROM training_records r JOIN users u ON u.id=r.user_id WHERE r.training_date BETWEEN ? AND ?"
+  ).bind(from,to).all();
+
+  for(const r of(centralTireur.results||[]))rank.push(r);
+  for(const r of(centralTraining.results||[]))training.push(r);
+
+  for(const x of rows){
+    const d=x.data||{};
+    for(const r of(d.tireur||[]))
+      rank.push({
+        id:`${x.user_id}-${r.id}`,
+        name:r.name,
+        hits:Number(r.hits||0),
+        date:r.date,
+        username:x.username
+      });
   }
+
+  rank.sort((a,b)=>b.hits-a.hits||String(a.date).localeCompare(String(b.date)));
+  const leaderboard=rank;
+
+  const weeklyPlayers=await env.DB.prepare(
+    "SELECT u.id,u.username,COALESCE(SUM(r.minutes),0) minutes FROM users u LEFT JOIN training_records r ON r.user_id=u.id AND r.training_date BETWEEN ? AND ? GROUP BY u.id,u.username HAVING minutes>0 ORDER BY minutes DESC"
+  ).bind(from,to).all();
+
+  return json({
+    users:rows.length,
+    leaderboard,
+    training,
+    players,
+    weeklyTraining:weeklyPlayers.results||[],
+    weekFrom:from,
+    weekTo:to
+  });
+}
   return json({error:"API-Endpunkt nicht gefunden."},404);
  }catch(e){return json({error:e?.message||"Serverfehler"},500)}
 }
