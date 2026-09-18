@@ -3,5 +3,12 @@
   "name": "petanque-pro-global",
   "main": "./_worker.js",
   "compatibility_date": "2026-09-11",
-  "compatibility_flags": []
+  "compatibility_flags": [],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "petanque-pro-db",
+      "database_id": "e29cd911-3255-42bf-b4ca-1947aac507fd"
+    }
+  ]
 }
